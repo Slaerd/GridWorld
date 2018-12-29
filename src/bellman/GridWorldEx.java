@@ -6,7 +6,7 @@ import java.util.Random;
 
 import Jama.Matrix;
 
-public class GridWorld{
+public class GridWorldEx{
 	
 	private boolean[][] grid;
 	private double[][] reward;
@@ -18,13 +18,15 @@ public class GridWorld{
 	private long seed = 124;
 	private int MAXREWARD = 20;
 	private HashMap<Integer,HashMap<String,Double>> action;
-													//############################################
-	private boolean showOtherStuff = false;			//###  AFFICHE OU NON AUTRE CHOSE QUE V^PI ###
-													//############################################
 	private HashMap<String,HashMap<Integer,ArrayList<double[]>>> pi;
 	private ArrayList<String> dir;
+											//#####################################################################
+	private boolean showOtherStuff = false; //##### AFFICHE OU NON AUTRE CHOSE QUE LES V^PI POUR LA LISIBILITE ####
+											//#####################################################################
 	
-	GridWorld(int num_g) {
+	private HashMap<String,double[]> stateAccess;
+
+	public GridWorldEx(int num_g) {
 		this.rdmnum = new Random(this.seed);
 		this.dir = new ArrayList<String>();
 		this.dir.add("left");
@@ -32,14 +34,91 @@ public class GridWorld{
 		this.dir.add("right");
 		this.dir.add("down");
 		this.dir.add("stay");
-	 
+		this.dir.add("jumpF");
+		
+		initStateAccess();
 		CreateGrid(num_g);
 		InitRdmPol();
-		WallCst();
 		InitTransitionMat();
-	 
+		
+		WallCst();
 	}
 	
+	public void initStateAccess() {
+		double[] singleAction = new double[1];
+		singleAction[0] = 1.;
+		double[] doubleAction = new double[2];
+		doubleAction[0] = 0.8;
+		doubleAction[1] = 0.2;
+		
+		stateAccess = new HashMap<String,double[]>();
+		
+		stateAccess.put("left", singleAction);
+		stateAccess.put("right", singleAction);
+		stateAccess.put("up", singleAction);
+		stateAccess.put("down", singleAction);
+		stateAccess.put("stay", singleAction);
+		stateAccess.put("jumpF", doubleAction);
+	}
+	
+	public int[][] getDirNeighbor(String act){
+		int[][] d = new int[stateAccess.get(act).length][2];
+		
+		if(act.equals("left")) d[0][0]=-1;
+		if(act.equals("right")) d[0][0]=1;
+		if(act.equals("up")) d[0][1]=-1;
+		if(act.equals("down")) d[0][1]=1;
+		if(act.equals("jumpF")) {
+			d[0][0] = 2;
+			d[0][1] = 0;
+			d[1][0] = 0;
+			d[1][1] = 2;
+		}
+		
+		return d;
+	}
+	
+	public HashMap<Integer,ArrayList<double[]>> computeTrans(String act) {
+		HashMap<Integer,ArrayList<double[]>> trans = new HashMap<Integer,ArrayList<double[]>>();
+		for(int i = 0; i < size_x; i++){
+			for(int j = 0; j < size_y; j++){
+				
+				ArrayList<double[]> reachableStates = new ArrayList<double[]>();
+				
+				
+				int[][] possibleShifts = getDirNeighbor(act);
+
+				for(int k = 0; k<possibleShifts.length; k++) {
+					
+					double[] stateNProba = new double[2];
+					int[] stateShift = possibleShifts[k];
+					stateNProba[0] = GridToState((i + stateShift[0] + size_x)%size_x, (j + stateShift[1] + size_y)%size_y);
+					stateNProba[1] = stateAccess.get(act)[k]; 
+					reachableStates.add(stateNProba);
+				}
+				
+				trans.put(GridToState(i,j), reachableStates);
+			}
+		}
+		return trans;
+	}
+	
+	public void WallCst() {
+		for(int i=0; i<size_x; i++) {
+			for(int j=0; j<size_y; j++) {				
+				if(!grid[i][j]) {
+					HashMap<String,Double> a = new HashMap<String,Double>();
+					a.put("left", 0.0);
+					a.put("up", 0.0);
+					a.put("right", 0.0);
+					a.put("down", 0.0);
+					a.put("stay", 1.0);
+					a.put("jumpF", 0.0);
+					action.put(GridToState(i,j),a);
+				}
+			}
+		}
+	}
 	/**
 	 * Transforme des coordonnees (i,j) en numero d'etat 
 	 */
@@ -56,23 +135,6 @@ public class GridWorld{
 		coord[0] = s - coord[1]*size_x;
 		return coord;
 	}
-	
-	/**
-	 * Donne les decalages en (x,y) a effectuer pour acceder au "voisins" (les case sur lesquelles on atterit) selon act
-	 * @param act l'action qu'on effectue
-	 * @return un double tableau contenant les multiples decalages possibles :
-	 * en [i][0] les decalages en x et en [i][1] les decalages en y
-	 */
-	private int[] getDirNeighbor(String act) {
-		int[] d = new int[2];
-
-		if(act.equals("left")) d[0]=-1;
-		if(act.equals("right")) d[0]=1;
-		if(act.equals("up")) d[1]=-1;
-		if(act.equals("down")) d[1]=1;
-		
-		return d;
-	}
 
 	/**
 	 * Initialise notre politique de maniere equiprobable
@@ -83,34 +145,11 @@ public class GridWorld{
 			for(int j = 0; j < size_y; j++){
 				HashMap<String,Double> probaActions = new HashMap<String,Double>();
 				for(String act : dir){
-					probaActions.put(act, 0.2);
+					probaActions.put(act, 1./dir.size());
 				}
 				action.put(GridToState(i,j), probaActions);
 			}
 		}
-	}
-	
-	/**
-	 * Liste pour chaque etat tous les etats accessibles 
-	 * et la probabilité de les atteindres en faisant l'action act
-	 */
-	private HashMap<Integer,ArrayList<double[]>> computeTrans(String act) {
-		HashMap<Integer,ArrayList<double[]>> trans = new HashMap<Integer,ArrayList<double[]>>();
-		for(int i = 0; i < size_x; i++){
-			for(int j = 0; j < size_y; j++){
-				
-				ArrayList<double[]> reachableStates = new ArrayList<double[]>();
-				double[] stateNProba = new double[2];
-				
-				int[] stateShift = getDirNeighbor(act);
-				stateNProba[0] = GridToState((i + stateShift[0] + size_x)%size_x, (j + stateShift[1] + size_y)%size_y);
-				stateNProba[1] = 1; //Ici une action n'a qu'une seule issue, on met donc 1
-				
-				reachableStates.add(stateNProba);
-				trans.put(GridToState(i,j), reachableStates);
-			}
-		}
-		return trans;
 	}
 		
 	/**
@@ -263,7 +302,7 @@ public class GridWorld{
 			V[i][0] = 0;
 		
 		while(delta > teta) {
-			
+			//System.out.println(delta);
 			delta = 0;
 			for(int s = 0; s < nbStates; s++) {
 				
@@ -415,30 +454,9 @@ public class GridWorld{
 		System.out.println();
 	}
 	
-	/**
-	 * Force un agent arrivant sur un mur a y rester. Les murs ont une recompense negative.
-	 * Lors de l'amelioration de la politique, l'agent va donc
-	 * eviter les murs a tout prix.
-	 */
-	private void WallCst() {
-		for(int i=0; i<size_x; i++) {
-			for(int j=0; j<size_y; j++) {				
-				if(!grid[i][j]) {
-					HashMap<String,Double> a = new HashMap<String,Double>();
-					a.put("left", 0.0);
-					a.put("up", 0.0);
-					a.put("right", 0.0);
-					a.put("down", 0.0);
-					a.put("stay", 1.0);
-					action.put(GridToState(i,j),a);
-				}
-			}
-		}
-	}
-	
 	public static void main(String[] args) {
 		
-		GridWorld gd = new GridWorld(0);
+		GridWorldEx gd = new GridWorldEx(0);
 		HashMap<Integer,HashMap<String,Double>> action0 = gd.action;
 		System.out.println("Grille : \n");
 		gd.showGrid();
@@ -516,5 +534,7 @@ public class GridWorld{
 				gd.showR(R);
 			}
 		}
+		
 	}
+	
 }

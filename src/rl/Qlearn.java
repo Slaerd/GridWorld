@@ -49,7 +49,7 @@ public class Qlearn {
 				newQSA = 0.;		// On initialise donc Q pendant l'apprentissage plutot qu'a la construction d'un Qlearn
 			}
 			
-			Double bestQ = -100.0;
+			Double bestQ = -100.0;	// La valeur initiale de bestQ doit etre inferieur ou egale a la recompense minimale, ici -100
 			
 			for(int actPrime : actions) {
 				Tuple<Integer,Integer> SAPrime = new Tuple<Integer,Integer>(sPrime,actPrime);
@@ -83,7 +83,7 @@ public class Qlearn {
 			if(rdm.nextDouble() < epsilon) {
 				int rdmAction = rdm.nextInt(8);
 				Tuple<Integer,Integer> rdmSA = new Tuple<Integer,Integer>(sPrime,rdmAction);
-				Double rdmQSA = q.get(new Tuple<Integer,Integer>(sPrime,rdmAction));
+				Double rdmQSA = q.get(rdmSA);
 				
 				if(rdmQSA == null) {
 					q.put(rdmSA, 0.);
