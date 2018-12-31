@@ -5,7 +5,7 @@ import java.util.Hashtable;
 import java.util.Random;
 
 public class Qlearn {
-	public double epsilon = 0.0001; // parametre epsilon pour \epsilon-greedy
+	public double epsilon = 0.1; // parametre epsilon pour \epsilon-greedy
 	public double alpha = 0.2; // taux d'apprentissage
 	public double gamma = 0.9; // parametre gamma des eq. de Bellman/
 	private Random rdm;

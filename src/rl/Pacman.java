@@ -16,7 +16,7 @@ public class Pacman extends Agent {
 
 	// IA
     private Qlearn ia;
-    private boolean learnMode = false; 	// false : SARSA
+    private boolean learnMode = true; 	// false : SARSA
     									// true : Q-Learning
     // Scores
 	public int good = 0;

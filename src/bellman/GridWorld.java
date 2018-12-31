@@ -60,8 +60,8 @@ public class GridWorld{
 	/**
 	 * Donne les decalages en (x,y) a effectuer pour acceder au "voisins" (les case sur lesquelles on atterit) selon act
 	 * @param act l'action qu'on effectue
-	 * @return un double tableau contenant les multiples decalages possibles :
-	 * en [i][0] les decalages en x et en [i][1] les decalages en y
+	 * @return un tableau contenant le decalage a effectuer:
+	 * en [0] le decalage en x et en [1] le decalage en y
 	 */
 	private int[] getDirNeighbor(String act) {
 		int[] d = new int[2];
@@ -461,14 +461,14 @@ public class GridWorld{
 			if(gd.showOtherStuff) {
 				System.out.println("V_pi(s)_0 : ");
 				gd.showV(V);
+				
+				System.out.println();
 			}
 			
 			for(int i = 0; i < 10; i++) {
 				gd.ImprovePolicy(V);
 				V = gd.IterativePolicy(0.1);
 			}
-			
-			System.out.println();
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);
@@ -496,14 +496,14 @@ public class GridWorld{
 				R = gd.computeVecR();
 				System.out.println("R(s)_0 : ");
 				gd.showR(R);
+				
+				System.out.println();
 			}
 			
 			for(int i = 0; i < 10; i++) {
 				gd.ImprovePolicy(V);
 				V = gd.SolvingP();
 			}
-			
-			System.out.println();
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);

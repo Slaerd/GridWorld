@@ -1,5 +1,7 @@
 package bellman;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
@@ -7,6 +9,10 @@ import java.util.Random;
 import Jama.Matrix;
 
 public class GridWorldEx{
+	
+	public static final int MODE_GRILLE = 1; 	// 0 pour la grille simple
+												// 1 pour la grille labyrinthe
+	public static final double jumpF_DOWN = 0.5; // Proba [0;1] d'aller vers le bas avec jumpF 
 	
 	private boolean[][] grid;
 	private double[][] reward;
@@ -20,12 +26,15 @@ public class GridWorldEx{
 	private HashMap<Integer,HashMap<String,Double>> action;
 	private HashMap<String,HashMap<Integer,ArrayList<double[]>>> pi;
 	private ArrayList<String> dir;
-											//#####################################################################
-	private boolean showOtherStuff = false; //##### AFFICHE OU NON AUTRE CHOSE QUE LES V^PI POUR LA LISIBILITE ####
-											//#####################################################################
+	private HashMap<Integer,String> actionWrite; 		// permet l'ecriture de l'evolution de la politique dans un fichier
 	
-	private HashMap<String,double[]> stateAccess;
-
+	private boolean showOtherStuff = false;		// affiche ou non certaines informations supplementaires comme R^pi
+												// ou les V^pi successifs
+	
+	private boolean allowJumpF = true;	// jumpF est une action supplementaire pouvant avoir 2 issues differentes
+	
+	private HashMap<String,double[]> stateAccess; 	// Associe une action a un tableau dont la taille correspond au nombre
+													// d'etats accessibles, et la composante i a la probabilite d'atteindre ces etats
 	public GridWorldEx(int num_g) {
 		this.rdmnum = new Random(this.seed);
 		this.dir = new ArrayList<String>();
@@ -34,22 +43,37 @@ public class GridWorldEx{
 		this.dir.add("right");
 		this.dir.add("down");
 		this.dir.add("stay");
-		this.dir.add("jumpF");
+		if(allowJumpF)
+			this.dir.add("jumpF");
 		
 		initStateAccess();
 		CreateGrid(num_g);
 		InitRdmPol();
 		InitTransitionMat();
+		initActionWrite();
 		
 		WallCst();
 	}
 	
+	/**
+	 * Initilaise actionWrite
+	 */
+	public void initActionWrite(){
+		actionWrite = new HashMap<Integer,String>();
+		String actionList = "";
+		for(int i = 0; i < nbStates; i++)
+			actionWrite.put(i,actionList);
+	}
+	
+	/**
+	 * Initialise stateAccess
+	 */
 	public void initStateAccess() {
 		double[] singleAction = new double[1];
 		singleAction[0] = 1.;
 		double[] doubleAction = new double[2];
-		doubleAction[0] = 0.8;
-		doubleAction[1] = 0.2;
+		doubleAction[0] = 1 - jumpF_DOWN;
+		doubleAction[1] = jumpF_DOWN;
 		
 		stateAccess = new HashMap<String,double[]>();
 		
@@ -58,9 +82,16 @@ public class GridWorldEx{
 		stateAccess.put("up", singleAction);
 		stateAccess.put("down", singleAction);
 		stateAccess.put("stay", singleAction);
-		stateAccess.put("jumpF", doubleAction);
+		if(allowJumpF)
+			stateAccess.put("jumpF", doubleAction);
 	}
 	
+	/**
+	 * Donne les decalages en (x,y) a effectuer pour acceder au "voisins" (les case sur lesquelles on atterit) selon act
+	 * @param act l'action qu'on effectue
+	 * @return un double tableau contenant les multiples decalages possibles :
+	 * en [i][0] les decalages en x et en [i][1] les decalages en y
+	 */
 	public int[][] getDirNeighbor(String act){
 		int[][] d = new int[stateAccess.get(act).length][2];
 		
@@ -70,14 +101,18 @@ public class GridWorldEx{
 		if(act.equals("down")) d[0][1]=1;
 		if(act.equals("jumpF")) {
 			d[0][0] = 2;
-			d[0][1] = 0;
-			d[1][0] = 0;
-			d[1][1] = 2;
+			d[0][1] = 0;	// On definit les etats accessibles par les actions ici
+			d[1][0] = 0;	// Ici jumpF fait avancer soit de 2 cases vers la droite
+			d[1][1] = 2;	// soit de 2 cases vers le bas
 		}
 		
 		return d;
 	}
 	
+	/**
+	 * Liste pour chaque etat tous les etats accessibles 
+	 * et la probabilité de les atteindres en faisant l'action act
+	 */
 	public HashMap<Integer,ArrayList<double[]>> computeTrans(String act) {
 		HashMap<Integer,ArrayList<double[]>> trans = new HashMap<Integer,ArrayList<double[]>>();
 		for(int i = 0; i < size_x; i++){
@@ -103,6 +138,11 @@ public class GridWorldEx{
 		return trans;
 	}
 	
+	/**
+	 * Force un agent arrivant sur un mur a y rester. Les murs ont une recompense negative.
+	 * Lors de l'amelioration de la politique, l'agent va donc
+	 * eviter les murs a tout prix.
+	 */
 	public void WallCst() {
 		for(int i=0; i<size_x; i++) {
 			for(int j=0; j<size_y; j++) {				
@@ -119,6 +159,14 @@ public class GridWorldEx{
 			}
 		}
 	}
+	
+/*	########################################################################################
+	########################################################################################
+	########       LE CODE EN DESSOUS EST IDENTIQUE A CELUI DANS GridWorld        ##########
+	########################################################################################
+	########################################################################################*/
+	
+	
 	/**
 	 * Transforme des coordonnees (i,j) en numero d'etat 
 	 */
@@ -454,9 +502,55 @@ public class GridWorldEx{
 		System.out.println();
 	}
 	
-	public static void main(String[] args) {
+	/**
+	 * Ajoute dans actionWrite l'action choisie par la politique pour un etat
+	 * Cela permet de stocker les meilleures actions sur toutes les iterations de l'amelioration de la politique
+	 */
+	public void actionStore() {
+		for(int s = 0; s < nbStates; s++) {
+			String previousActions = actionWrite.get(s);
+			
+			String actionDone = "";
+			for(String act : dir) {
+				Double probaAction = action.get(s).get(act);
+				if(probaAction == 1.)
+					actionDone = act;
+			}
+			
+			previousActions += "oof" + actionDone;
+			
+			actionWrite.replace(s,previousActions);
+		}
+	}
+	
+	/**
+	 * Ecrit le fichier illustrant l'amelioration de la politique
+	 * @param iterations l'iteration a laquelle on se trouve
+	 * @throws IOException
+	 */
+	public void actionFileWrite(int iteration) throws IOException {
+		FileWriter txt = new FileWriter("EvoPol.txt");
+		txt.write("\tIteration");
+		for(int i = 0; i < iteration - 1; i++)
+			txt.write("\t" + (i + 1));
+		txt.write("\nEtats\n");
 		
-		GridWorldEx gd = new GridWorldEx(0);
+		for(int s = 0; s < nbStates; s++) {
+			txt.write(Integer.toString(s));
+			String[] actionListSplit = actionWrite.get(s).split("oof");
+			for(int i = 0; i < actionListSplit.length - 1; i++) {
+				String action = actionListSplit[i];
+				txt.write("\t" + action);
+			}
+			txt.write("\n");	
+		}
+		txt.close();
+	}
+	
+	public static void main(String[] args) throws IOException{
+		
+		GridWorldEx gd = new GridWorldEx(MODE_GRILLE);
+		
 		HashMap<Integer,HashMap<String,Double>> action0 = gd.action;
 		System.out.println("Grille : \n");
 		gd.showGrid();
@@ -474,22 +568,26 @@ public class GridWorldEx{
 				+ "\n#######################################\n");
 		
 		{	
+			int i = 0;
+			HashMap<Integer,HashMap<String,Double>> prevAction;
 			double[][] V = new double[gd.nbStates][1];
 			
-			if(gd.showOtherStuff) {
-				System.out.println("V_pi(s)_0 : ");
-				gd.showV(V);
-			}
-			
-			for(int i = 0; i < 10; i++) {
+			do {
+				if(gd.showOtherStuff) {
+					System.out.println("V_pi(s)_" + i);
+					gd.showV(V);
+					System.out.println();
+				}
+				prevAction = gd.action;
 				gd.ImprovePolicy(V);
+				gd.actionStore();
 				V = gd.IterativePolicy(0.1);
-			}
-			
-			System.out.println();
+				i++;
+			}while(!gd.action.equals(prevAction));
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);
+			gd.actionFileWrite(i);
 		}
 		
 		System.out.println();
@@ -499,29 +597,33 @@ public class GridWorldEx{
 						+ "\n#######################################\n");
 		
 		{
+			int i = 0;
+			HashMap<Integer,HashMap<String,Double>> prevAction;
 		  	double[][] V = new double[gd.nbStates][1];
 			double[] R = new double[gd.nbStates];
 			
 			gd.action = action0;
 			
 			if(gd.showOtherStuff) {
-				V = gd.SolvingP();
-				System.out.println("V_pi(s)_0 : ");
-				gd.showV(V);
-				
-				System.out.println();
-				
 				R = gd.computeVecR();
 				System.out.println("R(s)_0 : ");
 				gd.showR(R);
+				
+				System.out.println();
 			}
 			
-			for(int i = 0; i < 10; i++) {
+			do{
+				if(gd.showOtherStuff) {
+					V = gd.SolvingP();
+					System.out.println("V_pi(s)_" + i);
+					gd.showV(V);
+					System.out.println();
+				}
+				prevAction = gd.action; 
 				gd.ImprovePolicy(V);
 				V = gd.SolvingP();
-			}
-			
-			System.out.println();
+				i++;
+			}while(!gd.action.equals(prevAction));
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);
@@ -533,8 +635,7 @@ public class GridWorldEx{
 				System.out.println("R_pi(s)_t : ");
 				gd.showR(R);
 			}
-		}
-		
+		}	
 	}
 	
 }

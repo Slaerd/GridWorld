@@ -44,7 +44,7 @@ public class Board extends JPanel implements ActionListener {
     private int nrofghosts = 1;
     private boolean dying = false;
     private boolean inside_game = false;
-    private int fq_showScore = 1000000;
+    private int fq_showScore = 10000;
     public int x_food = -1, y_food = -1;    private boolean ingame = false;
     public int score = 0;    
     public int reqdx, reqdy;
