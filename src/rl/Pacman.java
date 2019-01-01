@@ -7,7 +7,10 @@ import java.util.ArrayList;
 import javax.swing.ImageIcon;
 
 public class Pacman extends Agent {
-
+	
+	// Other
+	private int lookDist = 3;
+	
 	// Variables chooseAction 
 	private int lastState = -1; // etat précédent
 	private int lastAction = -1; // action précédente
@@ -16,7 +19,7 @@ public class Pacman extends Agent {
 
 	// IA
     private Qlearn ia;
-    private boolean learnMode = true; 	// false : SARSA
+    private boolean learnMode = false; 	// false : SARSA
     									// true : Q-Learning
     // Scores
 	public int good = 0;
@@ -62,7 +65,8 @@ public class Pacman extends Agent {
     	stuck = 0;
     	
     	// InitState
-    	InitLookCells(2);
+    	InitLookCells(lookDist);
+    	
     }
     
     public void ai_move() {
@@ -210,9 +214,15 @@ public class Pacman extends Agent {
 	}	
 	
 	private int calcState() {
-		int[] state = new int[12];
+		int size = -1;
+		if(lookDist == 2)
+			size = 12;
+		else
+			size = 24;
+		int[] state = new int[size];
 		int id=0;
 		for(Tuple<Integer,Integer> coord : lookcells) {
+			//System.out.println(id + " : " + coord.toString());
 			int level_st = b.getIndexFromCoord(posx+coord.x, posy+coord.y);
 			
 			if((level_st < 0) || (level_st >= b.levelstate.length)) 
@@ -220,14 +230,16 @@ public class Pacman extends Agent {
 			else state[id] = b.levelstate[level_st];
 			id++;
 		}
+		//printState(state);
+		//System.out.println();
 		return getStateNb(state);
 	}
 
 	
 	private boolean update() {
 		int id_state = calcState();
-		//System.out.println("id_state : ");
-		//printState(id_state);
+		System.out.println(id_state);
+	    printState(id_state);
 		int id_action = 0;
 		double reward = r_nothing;
 		
@@ -289,19 +301,40 @@ public class Pacman extends Agent {
 		stuck=0;
 		good=0;
 	}
-	
+/*		  9
+	    4 10 15
+	  1 5 11 16 20
+	0 2 6    17 21 23
+	  3 7 12 18 22
+	    8 13 19 
+	      14			*/
 	private void printState(int[] state) {
-		System.out.println("    "+state[4]);
-		System.out.println("  "+state[1]+" "+state[5]+" "+state[8]);
-		System.out.println(state[0]+" "+state[2]+" * "+state[9]+" "+state[11]);
-		System.out.println("  "+state[3]+" "+state[6]+" "+state[10]);
-		System.out.println("    "+state[7]);
+		if(lookDist == 2) {
+			System.out.println("    "+state[4]);
+			System.out.println("  "+state[1]+" "+state[5]+" "+state[8]);
+			System.out.println(state[0]+" "+state[2]+" * "+state[9]+" "+state[11]);
+			System.out.println("  "+state[3]+" "+state[6]+" "+state[10]);
+			System.out.println("    "+state[7]);
+		}else {
+			System.out.println("      "+state[9]);
+			System.out.println("    "+state[4]+" "+state[10]+" "+state[15]);
+			System.out.println("  "+state[1]+" "+state[5]+" "+state[11]+" "+state[16]+" "+state[20]);
+			System.out.println(state[0]+" "+state[2]+" "+state[6]+" * "+state[17]+" "+state[21]+" "+state[23]);
+			System.out.println("  "+state[3]+" "+state[7]+" "+state[12]+" "+state[18]+" "+state[22]);
+			System.out.println("    "+state[8]+" "+state[13]+" "+state[19]);
+			System.out.println("      "+state[14]);
+		}
 	}
 	
 	private void printState(int state) {
 		int id_state = state;
-		int[] get_state = new int[12];
-		for(int i=11; i>=0; i--) {
+		int size = -1;
+		if(lookDist == 2)
+			size = 12;
+		else
+			size = 24;
+		int[] get_state = new int[size];
+		for(int i=size-1; i>=0; i--) {
 			get_state[i] = (int) Math.floor(id_state/Math.pow(base,i));
 			id_state = (int) (id_state%Math.pow(base,i));
 		}
@@ -514,7 +547,7 @@ public class Pacman extends Agent {
 		lookcells = new ArrayList< Tuple<Integer,Integer>>();
 		for(int i=-lookdist; i<lookdist+1; i++) {
 			for(int j=-lookdist; j<lookdist+1; j++) {
-				if((Math.abs(i)+Math.abs(j) <= 2) && (i!=0 || j!=0)) {
+				if((Math.abs(i)+Math.abs(j) <= 3) && (i!=0 || j!=0)) {
 					lookcells.add(new Tuple<Integer,Integer>(i,j,b.blocksize,b.blocksize));
 				}
 			}

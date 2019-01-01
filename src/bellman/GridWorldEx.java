@@ -517,7 +517,7 @@ public class GridWorldEx{
 					actionDone = act;
 			}
 			
-			previousActions += "oof" + actionDone;
+			previousActions += "SPLIT" + actionDone;
 			
 			actionWrite.replace(s,previousActions);
 		}
@@ -537,7 +537,7 @@ public class GridWorldEx{
 		
 		for(int s = 0; s < nbStates; s++) {
 			txt.write(Integer.toString(s));
-			String[] actionListSplit = actionWrite.get(s).split("oof");
+			String[] actionListSplit = actionWrite.get(s).split("SPLIT");
 			for(int i = 0; i < actionListSplit.length - 1; i++) {
 				String action = actionListSplit[i];
 				txt.write("\t" + action);
