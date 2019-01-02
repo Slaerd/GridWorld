@@ -9,7 +9,7 @@ import javax.swing.ImageIcon;
 public class Pacman extends Agent {
 	
 	// Other
-	private int lookDist = 2;
+	private int lookDist = 3;
 	
 	// Variables chooseAction 
 	private long lastState = -1; // etat précédent

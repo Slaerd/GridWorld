@@ -77,7 +77,7 @@ public class Qlearn {
 				newQSA = 0.;
 			}
 			
-			Double chosenQ = 0.;
+			Double chosenQ = -100.;
 			Double QSAPrime = 0.;
 			
 			if(rdm.nextDouble() < epsilon) {
@@ -104,7 +104,7 @@ public class Qlearn {
 					chosenQ = Math.max(QSAPrime, chosenQ);
 				}
 			}
-			newQSA += alpha * (reward + gamma * QSAPrime - newQSA);
+			newQSA += alpha * (reward + gamma * chosenQ - newQSA);
 			q.replace(SA, newQSA);
 		}
 	}
