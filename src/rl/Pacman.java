@@ -9,7 +9,7 @@ import javax.swing.ImageIcon;
 public class Pacman extends Agent {
 	
 	// Other
-	private int lookDist = 2;
+	private int lookDist = 3;
 	
 	// Variables chooseAction 
 	private long lastState = -1; // etat précédent
@@ -250,8 +250,8 @@ public class Pacman extends Agent {
 		//RES RIGHT STATE  14877349865266250
 		//RES WRONG STATE  14877349865266249
 		long id_state = calcState();
-		//System.out.println(id_state);
-	    //printState(id_state);
+		System.out.println(id_state);
+	    printState(id_state);
 		int id_action = 0;
 		double reward = r_nothing;
 		
@@ -270,7 +270,6 @@ public class Pacman extends Agent {
 			
 		} else if ((cell_state&b.STATE_GOODSTUFF)!=0) { // trouver de la nourriture
 			good++;
-			b.score++;
 			reward = r_food;
 			b.random_cheese();	
 		}

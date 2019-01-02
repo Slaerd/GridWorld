@@ -68,7 +68,7 @@ public class Board extends JPanel implements ActionListener {
         9, 8, 8, 8, 8, 8, 8, 8, 8, 8, 25, 24, 24, 24, 28
     };*/
     
-   /*private final short leveldata[] = {
+   /* private final short leveldata[] = {
             3, 10, 10, 10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6,
             5, 32, 32, 32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
             5, 32, 32, 32, 1, 0, 0, 0, 0, 0, 0, 16, 0, 0, 4,

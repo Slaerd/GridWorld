@@ -77,10 +77,19 @@ public class Qlearn {
 				newQSA = 0.;
 			}
 			
-			Double chosenQ = 0.;
 			Double QSAPrime = 0.;
 			
-			if(rdm.nextDouble() < epsilon) {
+			int actPrime = chooseAction(s);
+			
+			Tuple<Long,Integer> SAPrime = new Tuple<Long,Integer>(sPrime,actPrime);
+			QSAPrime = q.get(SAPrime);
+			
+			if(QSAPrime == null) {
+				q.put(SAPrime, 0.);
+				QSAPrime = 0.;
+			}
+			
+			/*if(rdm.nextDouble() < epsilon) {
 				int rdmAction = rdm.nextInt(8);
 				Tuple<Long,Integer> rdmSA = new Tuple<Long,Integer>(sPrime,rdmAction);
 				Double rdmQSA = q.get(rdmSA);
@@ -103,7 +112,7 @@ public class Qlearn {
 					
 					chosenQ = Math.max(QSAPrime, chosenQ);
 				}
-			}
+			}*/
 			newQSA += alpha * (reward + gamma * QSAPrime - newQSA);
 			q.replace(SA, newQSA);
 		}
