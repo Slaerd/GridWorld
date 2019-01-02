@@ -13,13 +13,13 @@ public class Qlearn {
 	
 	// Suggestions
 	public int actions[];
-	public Hashtable< Tuple<Long,Integer>, Double> q;
+	public Hashtable< Tuple<Integer,Integer>, Double> q;
 	
 	// Constructeurs
 	public Qlearn(int[] actions, Pacman pac) {
 		rdm = new Random(seed);
 		this.actions = actions;
-		q = new Hashtable< Tuple<Long,Integer>, Double>();
+		q = new Hashtable< Tuple<Integer,Integer>, Double>();
 
 	}
 	
@@ -28,7 +28,7 @@ public class Qlearn {
 		this.epsilon = epsilon;
 		this.alpha = alpha;
 		this.gamma = gamma;
-		q = new Hashtable< Tuple<Long,Integer>, Double>();
+		q = new Hashtable< Tuple<Integer,Integer>, Double>();
 		
 	}
 	
@@ -39,9 +39,9 @@ public class Qlearn {
 	 * @param sPrime l'etat correspondant a la variable s' qui intervient dans la mise a jour de Q(s,a)
 	 * @param reward la recompense pour avoir fait l'action a depuis s
 	 */
-	public void learnQ(long s, int action,long sPrime,double reward) {
+	public void learnQ(int s, int action,int sPrime,double reward) {
 		if(s != -1) {															// s = -1 correspond a l'etat initial,
-			Tuple<Long,Integer> SA = new Tuple<Long,Integer>(s,action);	//  on ne fait rien
+			Tuple<Integer,Integer> SA = new Tuple<Integer,Integer>(s,action);	//  on ne fait rien
 			Double newQSA = q.get(SA);
 			
 			if(newQSA == null) {	// On a avec le board de base 4^12 etats possibles,
@@ -52,7 +52,7 @@ public class Qlearn {
 			Double bestQ = -100.0;	// La valeur initiale de bestQ doit etre inferieur ou egale a la recompense minimale, ici -100
 			
 			for(int actPrime : actions) {
-				Tuple<Long,Integer> SAPrime = new Tuple<Long,Integer>(sPrime,actPrime);
+				Tuple<Integer,Integer> SAPrime = new Tuple<Integer,Integer>(sPrime,actPrime);
 				Double QSAPrime = q.get(SAPrime);
 				
 				if(QSAPrime == null) {
@@ -67,9 +67,9 @@ public class Qlearn {
 		}
 	}
 	
-	public void learnSARSA(long s, int action,long sPrime,double reward) {
+	public void learnSARSA(int s, int action,int sPrime,double reward) {
 		if(s != -1) {
-			Tuple<Long,Integer> SA = new Tuple<Long,Integer>(s,action);
+			Tuple<Integer,Integer> SA = new Tuple<Integer,Integer>(s,action);
 			Double newQSA = q.get(SA);
 			
 			if(newQSA == null) {
@@ -81,7 +81,7 @@ public class Qlearn {
 			
 			int actPrime = chooseAction(s);
 			
-			Tuple<Long,Integer> SAPrime = new Tuple<Long,Integer>(sPrime,actPrime);
+			Tuple<Integer,Integer> SAPrime = new Tuple<Integer,Integer>(sPrime,actPrime);
 			QSAPrime = q.get(SAPrime);
 			
 			if(QSAPrime == null) {
@@ -91,7 +91,7 @@ public class Qlearn {
 			
 			/*if(rdm.nextDouble() < epsilon) {
 				int rdmAction = rdm.nextInt(8);
-				Tuple<Long,Integer> rdmSA = new Tuple<Long,Integer>(sPrime,rdmAction);
+				Tuple<Integer,Integer> rdmSA = new Tuple<Integer,Integer>(sPrime,rdmAction);
 				Double rdmQSA = q.get(rdmSA);
 				
 				if(rdmQSA == null) {
@@ -102,7 +102,7 @@ public class Qlearn {
 				chosenQ = rdmQSA;
 			}else{
 				for(int actPrime : actions) {
-					Tuple<Long,Integer> SAPrime = new Tuple<Long,Integer>(sPrime,actPrime);
+					Tuple<Integer,Integer> SAPrime = new Tuple<Integer,Integer>(sPrime,actPrime);
 					QSAPrime = q.get(SAPrime);
 					
 					if(QSAPrime == null) {
@@ -118,14 +118,14 @@ public class Qlearn {
 		}
 	}
 	
-	public int chooseAction(long s) {
+	public int chooseAction(int s) {
 		if(rdm.nextDouble() < epsilon)
 			return rdm.nextInt(8);
 		else {
 			int bestAction = 0;
 			for(int act : actions) {
-				Tuple<Long,Integer> SA = new Tuple<Long,Integer>(s,act);
-				Tuple<Long,Integer> bestSA = new Tuple<Long,Integer>(s,bestAction);
+				Tuple<Integer,Integer> SA = new Tuple<Integer,Integer>(s,act);
+				Tuple<Integer,Integer> bestSA = new Tuple<Integer,Integer>(s,bestAction);
 				Double QSA = q.get(SA);
 				Double bestQ = q.get(bestSA);
 				
