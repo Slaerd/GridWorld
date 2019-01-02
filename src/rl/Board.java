@@ -68,7 +68,7 @@ public class Board extends JPanel implements ActionListener {
         9, 8, 8, 8, 8, 8, 8, 8, 8, 8, 25, 24, 24, 24, 28
     };*/
     
-   /* private final short leveldata[] = {
+    /*private final short leveldata[] = {
             3, 10, 10, 10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6,
             5, 32, 32, 32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
             5, 32, 32, 32, 1, 0, 0, 0, 0, 0, 0, 16, 0, 0, 4,
@@ -125,7 +125,7 @@ public class Board extends JPanel implements ActionListener {
         setBackground(Color.black);
         setDoubleBuffered(true);
         
-        System.out.println("WorldAge\tNbMorts\tNbFood\tNbBloque");
+        System.out.println("# WorldAge - NbMorts - NbFood - NbBloque");
     }
 
     private void initVariables() {
@@ -383,7 +383,7 @@ public class Board extends JPanel implements ActionListener {
 	        	inside_game=false;
 	        }
     	}
-    	System.out.println(world_age+"\t"+pc.eaten+"\t"+pc.good+"\t"+pc.stuck);
+    	System.out.println(world_age+" "+pc.eaten+" "+pc.good+" "+pc.stuck);
     	pc.reset_state();
     }
 

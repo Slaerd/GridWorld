@@ -38,8 +38,5 @@ public class Tuple<X extends Number, Y  extends Number> {
 	    return this.x.equals(tu.x) &&
 	           this.y.equals(tu.y);
 	}
-	public String toString() {
-		return "("+x+","+y+")";
-	}
 }
 
