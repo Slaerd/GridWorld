@@ -1,44 +1,167 @@
 package bellman;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Random;
 
 import Jama.Matrix;
 
 public class GridWorld{
+	
+	public static final int MODE_GRILLE = 1; 	// 0 pour la grille simple
+												// 1 pour la grille labyrinthe
+	public static final double jumpF_DOWN = 0.5; // Proba [0;1] d'aller vers le bas avec jumpF 
 	
 	private boolean[][] grid;
 	private double[][] reward;
 	private int size_x;
 	private int size_y;
 	private int nbStates;
-	private Random rdmnum;
 	private double gamma = 0.5;
-	private long seed = 124;
-	private int MAXREWARD = 20;
 	private HashMap<Integer,HashMap<String,Double>> action;
-													//############################################
-	private boolean showOtherStuff = false;			//###  AFFICHE OU NON AUTRE CHOSE QUE V^PI ###
-													//############################################
 	private HashMap<String,HashMap<Integer,ArrayList<double[]>>> pi;
 	private ArrayList<String> dir;
+	private HashMap<Integer,String> actionWrite; 		// permet l'ecriture de l'evolution de la politique dans un fichier
 	
-	GridWorld(int num_g) {
-		this.rdmnum = new Random(this.seed);
+	private boolean showOtherStuff = false;		// affiche ou non certaines informations supplementaires comme R^pi
+												// ou les V^pi successifs
+	
+	private boolean allowJumpF = true;	// jumpF est une action supplementaire pouvant avoir 2 issues differentes
+	
+	private HashMap<String,double[]> stateAccess; 	// Associe une action a un tableau dont la taille correspond au nombre
+													// d'etats accessibles, et la composante i a la probabilite d'atteindre ces etats
+	public GridWorld(int num_g) {
 		this.dir = new ArrayList<String>();
 		this.dir.add("left");
 		this.dir.add("up");
 		this.dir.add("right");
 		this.dir.add("down");
 		this.dir.add("stay");
-	 
+		if(allowJumpF)
+			this.dir.add("jumpF");
+		
+		initStateAccess();
 		CreateGrid(num_g);
 		InitRdmPol();
-		WallCst();
 		InitTransitionMat();
-	 
+		initActionWrite();
+		
+		WallCst();
 	}
+	
+	/**
+	 * Initilaise actionWrite
+	 */
+	public void initActionWrite(){
+		actionWrite = new HashMap<Integer,String>();
+		String actionList = "";
+		for(int i = 0; i < nbStates; i++)
+			actionWrite.put(i,actionList);
+	}
+	
+	/**
+	 * Initialise stateAccess
+	 */
+	public void initStateAccess() {
+		double[] singleAction = new double[1];
+		singleAction[0] = 1.;
+		double[] doubleAction = new double[2];
+		doubleAction[0] = 1 - jumpF_DOWN;
+		doubleAction[1] = jumpF_DOWN;
+		
+		stateAccess = new HashMap<String,double[]>();
+		
+		stateAccess.put("left", singleAction);
+		stateAccess.put("right", singleAction);
+		stateAccess.put("up", singleAction);
+		stateAccess.put("down", singleAction);
+		stateAccess.put("stay", singleAction);
+		if(allowJumpF)
+			stateAccess.put("jumpF", doubleAction);
+	}
+	
+	/**
+	 * Donne les decalages en (x,y) a effectuer pour acceder au "voisins" (les case sur lesquelles on atterit) selon act
+	 * @param act l'action qu'on effectue
+	 * @return un double tableau contenant les multiples decalages possibles :
+	 * en [i][0] les decalages en x et en [i][1] les decalages en y
+	 */
+	public int[][] getDirNeighbor(String act){
+		int[][] d = new int[stateAccess.get(act).length][2];
+		
+		if(act.equals("left")) d[0][0]=-1;
+		if(act.equals("right")) d[0][0]=1;
+		if(act.equals("up")) d[0][1]=-1;
+		if(act.equals("down")) d[0][1]=1;
+		if(act.equals("jumpF")) {
+			d[0][0] = 2;
+			d[0][1] = 0;	// On definit les etats accessibles par les actions ici
+			d[1][0] = 0;	// Ici jumpF fait avancer soit de 2 cases vers la droite
+			d[1][1] = 2;	// soit de 2 cases vers le bas
+		}
+		
+		return d;
+	}
+	
+	/**
+	 * Liste pour chaque etat tous les etats accessibles 
+	 * et la probabilité de les atteindres en faisant l'action act
+	 */
+	public HashMap<Integer,ArrayList<double[]>> computeTrans(String act) {
+		HashMap<Integer,ArrayList<double[]>> trans = new HashMap<Integer,ArrayList<double[]>>();
+		for(int i = 0; i < size_x; i++){
+			for(int j = 0; j < size_y; j++){
+				
+				ArrayList<double[]> reachableStates = new ArrayList<double[]>();
+				
+				
+				int[][] possibleShifts = getDirNeighbor(act);
+
+				for(int k = 0; k<possibleShifts.length; k++) {
+					
+					double[] stateNProba = new double[2];
+					int[] stateShift = possibleShifts[k];
+					stateNProba[0] = GridToState((i + stateShift[0] + size_x)%size_x, (j + stateShift[1] + size_y)%size_y); // Java ne gere pas les modulos de negatifs
+					stateNProba[1] = stateAccess.get(act)[k]; 																// on ajoute donc size_Z pour diviser un nombre positif
+					reachableStates.add(stateNProba);
+				}
+				
+				trans.put(GridToState(i,j), reachableStates);
+			}
+		}
+		return trans;
+	}
+	
+	/**
+	 * Force un agent arrivant sur un mur a y rester. Les murs ont une recompense negative.
+	 * Lors de l'amelioration de la politique, l'agent va donc
+	 * eviter les murs a tout prix.
+	 */
+	public void WallCst() {
+		for(int i=0; i<size_x; i++) {
+			for(int j=0; j<size_y; j++) {				
+				if(!grid[i][j]) {
+					HashMap<String,Double> a = new HashMap<String,Double>();
+					a.put("left", 0.0);
+					a.put("up", 0.0);
+					a.put("right", 0.0);
+					a.put("down", 0.0);
+					a.put("stay", 1.0);
+					if(allowJumpF)
+						a.put("jumpF", 0.0);
+					action.put(GridToState(i,j),a);
+				}
+			}
+		}
+	}
+	
+/*	########################################################################################
+	########################################################################################
+	########       LE CODE EN DESSOUS EST IDENTIQUE A CELUI DANS GridWorld        ##########
+	########################################################################################
+	########################################################################################*/
+	
 	
 	/**
 	 * Transforme des coordonnees (i,j) en numero d'etat 
@@ -56,23 +179,6 @@ public class GridWorld{
 		coord[0] = s - coord[1]*size_x;
 		return coord;
 	}
-	
-	/**
-	 * Donne les decalages en (x,y) a effectuer pour acceder au "voisins" (les case sur lesquelles on atterit) selon act
-	 * @param act l'action qu'on effectue
-	 * @return un tableau contenant le decalage a effectuer:
-	 * en [0] le decalage en x et en [1] le decalage en y
-	 */
-	private int[] getDirNeighbor(String act) {
-		int[] d = new int[2];
-
-		if(act.equals("left")) d[0]=-1;
-		if(act.equals("right")) d[0]=1;
-		if(act.equals("up")) d[1]=-1;
-		if(act.equals("down")) d[1]=1;
-		
-		return d;
-	}
 
 	/**
 	 * Initialise notre politique de maniere equiprobable
@@ -83,34 +189,11 @@ public class GridWorld{
 			for(int j = 0; j < size_y; j++){
 				HashMap<String,Double> probaActions = new HashMap<String,Double>();
 				for(String act : dir){
-					probaActions.put(act, 0.2);
+					probaActions.put(act, 1./dir.size());
 				}
 				action.put(GridToState(i,j), probaActions);
 			}
 		}
-	}
-	
-	/**
-	 * Liste pour chaque etat tous les etats accessibles 
-	 * et la probabilité de les atteindres en faisant l'action act
-	 */
-	private HashMap<Integer,ArrayList<double[]>> computeTrans(String act) {
-		HashMap<Integer,ArrayList<double[]>> trans = new HashMap<Integer,ArrayList<double[]>>();
-		for(int i = 0; i < size_x; i++){
-			for(int j = 0; j < size_y; j++){
-				
-				ArrayList<double[]> reachableStates = new ArrayList<double[]>();
-				double[] stateNProba = new double[2];
-				
-				int[] stateShift = getDirNeighbor(act);
-				stateNProba[0] = GridToState((i + stateShift[0] + size_x)%size_x, (j + stateShift[1] + size_y)%size_y);
-				stateNProba[1] = 1; //Ici une action n'a qu'une seule issue, on met donc 1
-				
-				reachableStates.add(stateNProba);
-				trans.put(GridToState(i,j), reachableStates);
-			}
-		}
-		return trans;
 	}
 		
 	/**
@@ -263,7 +346,7 @@ public class GridWorld{
 			V[i][0] = 0;
 		
 		while(delta > teta) {
-			
+			//System.out.println(delta);
 			delta = 0;
 			for(int s = 0; s < nbStates; s++) {
 				
@@ -416,29 +499,54 @@ public class GridWorld{
 	}
 	
 	/**
-	 * Force un agent arrivant sur un mur a y rester. Les murs ont une recompense negative.
-	 * Lors de l'amelioration de la politique, l'agent va donc
-	 * eviter les murs a tout prix.
+	 * Ajoute dans actionWrite l'action choisie par la politique pour un etat
+	 * Cela permet de stocker les meilleures actions sur toutes les iterations de l'amelioration de la politique
 	 */
-	private void WallCst() {
-		for(int i=0; i<size_x; i++) {
-			for(int j=0; j<size_y; j++) {				
-				if(!grid[i][j]) {
-					HashMap<String,Double> a = new HashMap<String,Double>();
-					a.put("left", 0.0);
-					a.put("up", 0.0);
-					a.put("right", 0.0);
-					a.put("down", 0.0);
-					a.put("stay", 1.0);
-					action.put(GridToState(i,j),a);
-				}
+	public void actionStore() {
+		for(int s = 0; s < nbStates; s++) {
+			String previousActions = actionWrite.get(s);
+			
+			String actionDone = "";
+			for(String act : dir) {
+				Double probaAction = action.get(s).get(act);
+				if(probaAction == 1.)
+					actionDone = act;
 			}
+			
+			previousActions += "SPLIT" + actionDone;
+			
+			actionWrite.replace(s,previousActions);
 		}
 	}
 	
-	public static void main(String[] args) {
+	/**
+	 * Ecrit le fichier illustrant l'amelioration de la politique
+	 * @param iterations l'iteration a laquelle on se trouve
+	 * @throws IOException
+	 */
+	public void actionFileWrite(int iteration) throws IOException {
+		FileWriter txt = new FileWriter("EvoPol.txt");
+		txt.write("\tIteration");
+		for(int i = 0; i < iteration - 1; i++)
+			txt.write("\t" + (i + 1));
+		txt.write("\nEtats\n");
 		
-		GridWorld gd = new GridWorld(0);
+		for(int s = 0; s < nbStates; s++) {
+			txt.write(Integer.toString(s));
+			String[] actionListSplit = actionWrite.get(s).split("SPLIT");
+			for(int i = 0; i < actionListSplit.length - 1; i++) {
+				String action = actionListSplit[i];
+				txt.write("\t" + action);
+			}
+			txt.write("\n");	
+		}
+		txt.close();
+	}
+	
+	public static void main(String[] args) throws IOException{
+		
+		GridWorld gd = new GridWorld(MODE_GRILLE);
+		
 		HashMap<Integer,HashMap<String,Double>> action0 = gd.action;
 		System.out.println("Grille : \n");
 		gd.showGrid();
@@ -456,22 +564,26 @@ public class GridWorld{
 				+ "\n#######################################\n");
 		
 		{	
+			int i = 0;
+			HashMap<Integer,HashMap<String,Double>> prevAction;
 			double[][] V = new double[gd.nbStates][1];
 			
-			if(gd.showOtherStuff) {
-				System.out.println("V_pi(s)_0 : ");
-				gd.showV(V);
-				
-				System.out.println();
-			}
-			
-			for(int i = 0; i < 10; i++) {
+			do {
+				if(gd.showOtherStuff) {
+					System.out.println("V_pi(s)_" + i);
+					gd.showV(V);
+					System.out.println();
+				}
+				prevAction = gd.action;
 				gd.ImprovePolicy(V);
+				gd.actionStore();
 				V = gd.IterativePolicy(0.1);
-			}
+				i++;
+			}while(!gd.action.equals(prevAction));
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);
+			gd.actionFileWrite(i);
 		}
 		
 		System.out.println();
@@ -481,18 +593,14 @@ public class GridWorld{
 						+ "\n#######################################\n");
 		
 		{
+			int i = 0;
+			HashMap<Integer,HashMap<String,Double>> prevAction;
 		  	double[][] V = new double[gd.nbStates][1];
 			double[] R = new double[gd.nbStates];
 			
 			gd.action = action0;
 			
 			if(gd.showOtherStuff) {
-				V = gd.SolvingP();
-				System.out.println("V_pi(s)_0 : ");
-				gd.showV(V);
-				
-				System.out.println();
-				
 				R = gd.computeVecR();
 				System.out.println("R(s)_0 : ");
 				gd.showR(R);
@@ -500,10 +608,18 @@ public class GridWorld{
 				System.out.println();
 			}
 			
-			for(int i = 0; i < 10; i++) {
+			do{
+				if(gd.showOtherStuff) {
+					V = gd.SolvingP();
+					System.out.println("V_pi(s)_" + i);
+					gd.showV(V);
+					System.out.println();
+				}
+				prevAction = gd.action; 
 				gd.ImprovePolicy(V);
 				V = gd.SolvingP();
-			}
+				i++;
+			}while(!gd.action.equals(prevAction));
 			
 			System.out.println("V_pi(s)_t : ");
 			gd.showV(V);
@@ -515,6 +631,7 @@ public class GridWorld{
 				System.out.println("R_pi(s)_t : ");
 				gd.showR(R);
 			}
-		}
+		}	
 	}
+	
 }

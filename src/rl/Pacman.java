@@ -8,18 +8,20 @@ import javax.swing.ImageIcon;
 
 public class Pacman extends Agent {
 	
-	// Other
-	private int lookDist = 3;
+	// View
+	private int lookDist = 3; 	// Amplitude du champ de vision de notre agent
+								// LES PRINTS NE GERENT QUE LES VALEURS 2 ET 3
 	
 	// Variables chooseAction 
-	private long lastState = -1; // etat précédent
-	private int lastAction = -1; // action précédente
+	private long lastState = -1; // etat precedent
+								 // un int ne suffit plus a representer les etats en vue 3
+	private int lastAction = -1; // action precedente
 	private boolean use_ia = true;  // utiliser le qlearning ? 
 	private final int base = 5;
 
 	// IA
     private Qlearn ia;
-    private boolean learnMode = false; 	// false : SARSA
+    private boolean learnMode = true; 	// false : SARSA
     									// true : Q-Learning
     // Scores
 	public int good = 0;
@@ -28,7 +30,7 @@ public class Pacman extends Agent {
 	public int eaten = 0;
 	public boolean restart = false;
     
-	// possibles récompenses
+	// possibles recompenses
 	private double r_ghost = -100; // je tombe sur un fantome
 	private double r_food  = 50; // je tombe sur de la nourriture
 	private double r_stuck = -5; // je vais vers un mur
@@ -207,27 +209,17 @@ public class Pacman extends Agent {
 	 */
 	private long getStateNb(int[] state) {
 		long id_s = 0;
-		//System.out.println("SPLIT");
-		//printState(state);
 		for(int i=0; i<state.length; i++) {
-			//System.out.print((long)(state[i]*Math.pow(base, i)) + "+");
 			id_s += (long)state[i]*(long)Math.pow(base,i);
 		}
-		//System.out.println();
-		//System.out.println("resultat : " + id_s);
 		return id_s;
 	}
 
 	private long calcState() {
-		int size = -1;
-		if(lookDist == 2)
-			size = 12;
-		else
-			size = 24;
+		int size = 2*lookDist*(lookDist + 1);
 		int[] state = new int[size];
 		int id=0;
 		for(Tuple<Integer,Integer> coord : lookcells) {
-			//System.out.println(id + " : " + coord.toString());
 			int level_st = b.getIndexFromCoord(posx+coord.x, posy+coord.y);
 			
 			if((level_st < 0) || (level_st >= b.levelstate.length)) 
@@ -235,23 +227,14 @@ public class Pacman extends Agent {
 			else state[id] = b.levelstate[level_st];
 			id++;
 		}
-		/*System.out.println(getStateNb(state));
-		printState(state);
-		System.out.println();*/
-		
 		return getStateNb(state);
 	}
 
 	
 	private boolean update() {
-		//PRINT getStateNb 14877349865266248
-		//PRINT id_state   14877349865266248
-		
-		//RES RIGHT STATE  14877349865266250
-		//RES WRONG STATE  14877349865266249
 		long id_state = calcState();
-		//System.out.println(id_state);
-	    //printState(id_state);
+		System.out.println(id_state);
+	    printState(id_state);
 		int id_action = 0;
 		double reward = r_nothing;
 		
@@ -329,23 +312,21 @@ public class Pacman extends Agent {
 			System.out.println("  "+state[3]+" "+state[6]+" "+state[10]);
 			System.out.println("    "+state[7]);
 		}else {
-			System.out.println("      "+state[9]);
-			System.out.println("    "+state[4]+" "+state[10]+" "+state[15]);
-			System.out.println("  "+state[1]+" "+state[5]+" "+state[11]+" "+state[16]+" "+state[20]);
-			System.out.println(state[0]+" "+state[2]+" "+state[6]+" * "+state[17]+" "+state[21]+" "+state[23]);
-			System.out.println("  "+state[3]+" "+state[7]+" "+state[12]+" "+state[18]+" "+state[22]);
-			System.out.println("    "+state[8]+" "+state[13]+" "+state[19]);
-			System.out.println("      "+state[14]);
+			if(lookDist == 3){
+				System.out.println("      "+state[9]);
+				System.out.println("    "+state[4]+" "+state[10]+" "+state[15]);
+				System.out.println("  "+state[1]+" "+state[5]+" "+state[11]+" "+state[16]+" "+state[20]);
+				System.out.println(state[0]+" "+state[2]+" "+state[6]+" * "+state[17]+" "+state[21]+" "+state[23]);
+				System.out.println("  "+state[3]+" "+state[7]+" "+state[12]+" "+state[18]+" "+state[22]);
+				System.out.println("    "+state[8]+" "+state[13]+" "+state[19]);
+				System.out.println("      "+state[14]);
+			}
 		}
 	}
 	
 	private void printState(long state) {
 		long id_state = state;
-		int size = -1;
-		if(lookDist == 2)
-			size = 12;
-		else
-			size = 24;
+		int size = 2*lookDist*(lookDist + 1);
 		int[] get_state = new int[size];
 		for(int i=size-1; i>=0; i--) {
 			//System.out.println("id_state["+i+"]" + " : "  + id_state);
@@ -355,7 +336,8 @@ public class Pacman extends Agent {
 		}
 		printState(get_state);
 	}
-
+	
+	@SuppressWarnings("unused")
 	private void showAction(int action) {
 		switch(action) {
 		  case 0: // N

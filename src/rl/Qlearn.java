@@ -1,6 +1,5 @@
 package rl;
 
-import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Random;
 
@@ -67,6 +66,13 @@ public class Qlearn {
 		}
 	}
 	
+	/**
+	 * Met a jour Q(s,a) en suivant l'algorithme SARSA
+	 * @param s l'etat correspondant a la variable s de Q(s,a)
+	 * @param action l'action correspondant a la variable a de Q(s,a)
+	 * @param sPrime l'etat correspondant a la variable s' qui intervient dans la mise a jour de Q(s,a)
+	 * @param reward la recompense pour avoir fait l'action a depuis s
+	 */
 	public void learnSARSA(long s, int action,long sPrime,double reward) {
 		if(s != -1) {
 			Tuple<Long,Integer> SA = new Tuple<Long,Integer>(s,action);
@@ -109,6 +115,11 @@ public class Qlearn {
 		}
 	}
 	
+	/**
+	 * Choisit une action depuis un etat en suivant le modele e-greedy
+	 * @param s l'etat initial
+	 * @return soit une action au hasard, soit la meilleure action
+	 */
 	public int chooseAction(long s) {
 		if(rdm.nextDouble() < epsilon)
 			return rdm.nextInt(8);
