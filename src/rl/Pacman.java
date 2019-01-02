@@ -329,9 +329,7 @@ public class Pacman extends Agent {
 		int size = 2*lookDist*(lookDist + 1);
 		int[] get_state = new int[size];
 		for(int i=size-1; i>=0; i--) {
-			//System.out.println("id_state["+i+"]" + " : "  + id_state);
 			get_state[i] = (int)Math.floor(id_state/(long)Math.pow(base,i));
-			//System.out.println("get_state["+i+"] : " + get_state[i]);
 			id_state = id_state%(long)Math.pow(base,i);
 		}
 		printState(get_state);

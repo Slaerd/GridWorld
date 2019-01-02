@@ -346,7 +346,6 @@ public class GridWorld{
 			V[i][0] = 0;
 		
 		while(delta > teta) {
-			//System.out.println(delta);
 			delta = 0;
 			for(int s = 0; s < nbStates; s++) {
 				

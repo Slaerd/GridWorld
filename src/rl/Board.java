@@ -125,7 +125,7 @@ public class Board extends JPanel implements ActionListener {
         setBackground(Color.black);
         setDoubleBuffered(true);
         
-        System.out.println("WorldAge\tNbMorts\tNbFood\tNbBloque");
+        System.out.println("WorldAge\tNbMorts\tNbFood\tNbBloque"); //Passage d'espaces a des tabulations pour tracer les graphes
     }
 
     private void initVariables() {
@@ -383,7 +383,7 @@ public class Board extends JPanel implements ActionListener {
 	        	inside_game=false;
 	        }
     	}
-    	System.out.println(world_age+"\t"+pc.eaten+"\t"+pc.good+"\t"+pc.stuck);
+    	System.out.println(world_age+"\t"+pc.eaten+"\t"+pc.good+"\t"+pc.stuck); //Passage d'espaces a des tabulations pour tracer les graphes
     	pc.reset_state();
     }
 

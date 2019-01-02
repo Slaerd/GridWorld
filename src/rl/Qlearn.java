@@ -141,7 +141,6 @@ public class Qlearn {
 					bestQ = 0.;
 				}
 				
-				//System.out.println(bestQ);
 				if(bestQ < QSA){
 					bestAction = act;
 				}
